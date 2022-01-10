@@ -8,10 +8,10 @@ import (
 	"genericsmrproto"
 	"golang.org/x/sync/semaphore"
 	"log"
-	"masterproto"
+	//"masterproto"
 	"math/rand"
 	//"net"
-	"net/rpc"
+	//"net/rpc"
 	"os"
 	"poisson"
 	"runtime"
@@ -20,6 +20,7 @@ import (
 	"time"
 	"zipfian"
 	"clients"
+	"dlog"
 )
 
 // From Gryff Clients
@@ -28,6 +29,11 @@ var clientId *int = flag.Int(
 	"clientId",
 	0,
 	"Client identifier for use in replication protocols.")
+
+var debug *bool = flag.Bool(
+	"debug",
+	false,
+	"Enable debug output.")
 
 var defaultReplicaOrder *bool = flag.Bool(
 	"defaultReplicaOrder",
@@ -41,7 +47,7 @@ var proxy *bool = flag.Bool(
 
 var replProtocol *string = flag.String(
 	"replProtocol",
-	"",
+	"gryff",
 	"Replication protocol used by clients and servers.")
 
 var statsFile *string = flag.String(
@@ -93,22 +99,10 @@ const (
 	RMW
 )
 
-func createClient() clients.Client {
-	switch *replProtocol {
-	case "abd":
-		return clients.NewAbdClient(int32(*clientId), *masterAddr, *masterPort, *forceLeader,
-			*statsFile, *regular)
-	case "gryff":
-		return clients.NewGryffClient(int32(*clientId), *masterAddr, *masterPort, *forceLeader,
-			*statsFile, *regular, *sequential, *proxy, *thrifty, *defaultReplicaOrder,
-			*epaxosMode)
-	case "epaxos":
-		return clients.NewProposeClient(int32(*clientId), *masterAddr, *masterPort, *forceLeader,
-			*statsFile, false, true)
-	default:
-		return clients.NewProposeClient(int32(*clientId), *masterAddr, *masterPort, *forceLeader,
-			*statsFile, false, false)
-	}
+func createClient(clientId int32) clients.Client {
+	return clients.NewGryffClient(clientId, *masterAddr, *masterPort, *forceLeader,
+		*statsFile, *regular, *sequential, *proxy, *thrifty, *defaultReplicaOrder,
+		*epaxosMode)
 }
 
 type RequestResult struct {
@@ -149,6 +143,8 @@ var orInfos []*outstandingRequestInfo
 func main() {
 	flag.Parse()
 
+	dlog.DLOG = *debug
+
 	runtime.GOMAXPROCS(*procs)
 
 	if *conflicts > 100 {
@@ -157,37 +153,6 @@ func main() {
 
 	orInfos = make([]*outstandingRequestInfo, *T)
 
-	var master *rpc.Client
-	var err error
-	for {
-		master, err = rpc.DialHTTP("tcp", fmt.Sprintf("%s:%d", *masterAddr, *masterPort))
-		if err != nil {
-			log.Println("Error connecting to master", err)
-		} else {
-			break
-		}
-	}
-
-	rlReply := new(masterproto.GetReplicaListReply)
-	for !rlReply.Ready {
-		err := master.Call("Master.GetReplicaList", new(masterproto.GetReplicaListArgs), rlReply)
-		if err != nil {
-			log.Println("Error making the GetReplicaList RPC", err)
-		}
-	}
-
-	leader := 0
-	if *forceLeader < 0 {
-		reply := new(masterproto.GetLeaderReply)
-		if err = master.Call("Master.GetLeader", new(masterproto.GetLeaderArgs), reply); err != nil {
-			log.Println("Error making the GetLeader RPC:", err)
-		}
-		leader = reply.LeaderId
-	} else {
-		leader = *forceLeader
-	}
-	log.Printf("The leader is replica %d\n", leader)
-
 	readings := make(chan *response, 100000)
 
 	//startTime := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -195,8 +160,9 @@ func main() {
 	for i := 0; i < *T; i++ {
 
 		// automatically allocate clients equally
+		leader := 0
 		if *singleClusterTest {
-			leader = i % len(rlReply.ReplicaList)
+			leader = i % 3
 		}
 
 		//server, err := net.Dial("tcp", rlReply.ReplicaList[leader])
@@ -215,21 +181,21 @@ func main() {
 		//waitTime := startTime.Intn(3)
 		//time.Sleep(time.Duration(waitTime) * 100 * 1e6)
 
-		go simulatedClientWriter(orInfo, readings, leader)
+		go simulatedClientWriter(orInfo, readings, leader, i)
 		//go simulatedClientReader(reader, orInfo, readings, leader)
 
 		orInfos[i] = orInfo
 	}
 
 	if *singleClusterTest {
-		printerMultipeFile(readings, len(rlReply.ReplicaList))
+		printerMultipeFile(readings, 3)
 	} else {
 		printer(readings)
 	}
 }
 
-func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *response, leader int) {
-	client := createClient()
+func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *response, leader int, clientId int) {
+	client := createClient(int32(clientId))
 	//var opString string
 	var opType OpType
 	var k int64
