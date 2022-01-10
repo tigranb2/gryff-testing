@@ -1,4 +1,4 @@
-export GOPATH=/Users/tsengle/GolandProjects/gryff
+export GOPATH=/root/go/src/gryff
 go install master
 go install server
 go install client
