@@ -125,6 +125,7 @@ def get_metrics(dirname):
         'p999_Write2': np.percentile(exec_lats_write2, 99.9),
         'p9999_Write2': np.percentile(exec_lats_write2, 99.99),
         'p50_latency': np.percentile(execution_latency_aggregate_regions_combined, 50),
+        'p99.9_latency': np.percentile(execution_latency_aggregate_regions_combined, 99.9),
         'avg_tput': statistics.mean(tputs),
         # 'total_ops': len(tputs),
     }
