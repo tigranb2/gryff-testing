@@ -472,8 +472,10 @@ func printerMultipeFile(readings chan *response, numLeader int, experimentStart 
 		// Log summary to lattput file
 		//lattputFile.WriteString(fmt.Sprintf("%d %f %f %d %d %f\n", endTime.UnixNano(), avg, tput, count, totalOrs, avgCommit))
 
-		lattputFile.WriteString(fmt.Sprintf("%d %f %f %d %d %f\n", endTime.UnixNano(), avg, tput, count, totalOrs, avgCommit))
-
+		// Log all to latency file if they are not within the ramp up or ramp down period.
+		if *rampUp < int(currentRuntime.Seconds()) && int(currentRuntime.Seconds()) < *timeout - *rampDown {
+			lattputFile.WriteString(fmt.Sprintf("%d %f %f %d %d %f\n", endTime.UnixNano(), avg, tput, count, totalOrs, avgCommit))
+		}
 		startTime = endTime
 	}
 }
