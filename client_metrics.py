@@ -74,7 +74,9 @@ def get_metrics(dirname):
         exec_lats_write2 = []
         for l in f:
             l = l.split(' ')
-            exec_lats_write2.append(float(l[1]))
+            exec_lats_write2.append(float(l[1])) 
+            
+    execution_latency_aggregate_regions_combined = exec_lats_read0 + exec_lats_read1 + exec_lats_read2 + exec_lats_write0 + exec_lats_write1 + exec_lats_write2
 
     return {
         #'mean_lat_commit': statistics.mean(commit_lats),
