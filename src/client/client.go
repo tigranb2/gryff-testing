@@ -435,10 +435,11 @@ func printerMultipeFile(readings chan *response, numLeader int, experimentStart 
 		var sum float64 = 0
 		var commitSum float64 = 0
 		endTime := time.Now() // Set to current time in case there are no readings
+		currentRuntime := time.Now().Sub(experimentStart)
 		for i := 0; i < count; i++ {
 			resp := <-readings
 
-						currentRuntime := time.Now().Sub(experimentStart)
+			//currentRuntime := time.Now().Sub(experimentStart)
 
  			// Log all to latency file if they are not within the ramp up or ramp down period.
  			if *rampUp < int(currentRuntime.Seconds()) && int(currentRuntime.Seconds()) < *timeout - *rampDown {
