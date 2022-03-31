@@ -222,6 +222,7 @@ func (r *Replica) GetCurrentValue(key state.Key) state.Value {
 }
 
 func (r *Replica) SetCurrentValue(key state.Key, val state.Value) {
+  r.sync()	
   if r.Exec {
     r.State.Store[key] = val
   }
