@@ -80,7 +80,7 @@ var masterAddr *string = flag.String("maddr", "", "Master address. Defaults to l
 var masterPort *int = flag.Int("mport", 7087, "Master port.")
 var procs *int = flag.Int("p", 2, "GOMAXPROCS.")
 var conflicts *int = flag.Int("c", 0, "Percentage of conflicts. If -1, uses Zipfian distribution.")
-var forceLeader = flag.Int("l", -1, "Force client to talk to a certain replica.")
+var forceLeader = flag.Int("l", -1, "Force client to talk to a certain replica. Does not work in this version of the repo")
 var startRange = flag.Int("sr", 0, "Key range start")
 var T = flag.Int("T", 16, "Number of threads (simulated clients).")
 var outstandingReqs = flag.Int64("or", 1, "Number of outstanding requests a thread can have at any given time.")
@@ -102,8 +102,8 @@ const (
 	RMW
 )
 
-func createClient(clientId int32) clients.Client {
-	return clients.NewGryffClient(clientId, *masterAddr, *masterPort, *forceLeader,
+func createClient(clientId int32, replicaId int32) clients.Client {
+	return clients.NewGryffClient(clientId, *masterAddr, *masterPort, replicaId,
 		*statsFile, *regular, *sequential, *proxy, *thrifty, *defaultReplicaOrder,
 		*epaxosMode)
 }
@@ -199,7 +199,7 @@ func main() {
 }
 
 func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *response, leader int, clientId int) {
-	client := createClient(int32(clientId))
+	client := createClient(int32(clientId), int32(clientId % 3))
 	//var opString string
 	var opType OpType
 	var k int64
