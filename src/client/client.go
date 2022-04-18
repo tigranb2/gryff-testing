@@ -102,7 +102,7 @@ const (
 	RMW
 )
 
-func createClient(clientId int32, replicaId int32) clients.Client {
+func createClient(clientId int32, replicaId int) clients.Client {
 	return clients.NewGryffClient(clientId, *masterAddr, *masterPort, replicaId,
 		*statsFile, *regular, *sequential, *proxy, *thrifty, *defaultReplicaOrder,
 		*epaxosMode)
@@ -199,7 +199,7 @@ func main() {
 }
 
 func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *response, leader int, clientId int) {
-	client := createClient(int32(clientId), int32(clientId % 3))
+	client := createClient(int32(clientId), clientId % 3)
 	//var opString string
 	var opType OpType
 	var k int64
