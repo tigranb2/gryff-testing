@@ -60,6 +60,7 @@ type AbstractClient struct {
   replicaAddrs []string
   numReplicas int
   replica net.Conn
+  replicas []net.Conn
   readers []*bufio.Reader
   writers []*bufio.Writer
   reader *bufio.Reader
