@@ -355,7 +355,7 @@ func (c *GryffClient) Write(key int64, value int64) bool {
       state.Value(value), *c.dep}
 	
   c.writer.WriteByte(clientproto.Gryff_WRITE)
-  write.Marshal(c.writers)
+  write.Marshal(c.writer)
   c.writer.Flush()
 	
   // if c.proxy {
