@@ -94,17 +94,17 @@ func NewAbstractClient(id int32, serverAddr string, serverPort int, forceLeader 
     nil,                            // replicas
     nil,                            // readers
     nil,                            // writers
-    false,      	            // reader
-    false,                          // writer
+    nil,      	                    // reader
+    nil,                            // writer
     false,                          // shutdown
     -1,                             // leader
     make(chan fastrpc.Serializable, // pingReplyChan
       CHAN_BUFFER_SIZE), 
-    make([]bool, 0),                // replicasAlive
-    make([]uint64, 0),              // replicaPing
-    make([]int32, 0),                 // replicasByPingRank
+    nil,                            // replicasAlive
+    nil,                            // replicaPing
+    nil,                            // replicasByPingRank
     make([]int, 0),                 // retries
-    make([]map[uint8]bool, 0),      // delayRPC
+    nil,                            // delayRPC
     make([]map[uint8]chan fastrpc.Serializable, 0), // delayedRPC
   }
   c.RegisterRPC(new(clientproto.PingReply), clientproto.GEN_PING_REPLY, c.pingReplyChan)
