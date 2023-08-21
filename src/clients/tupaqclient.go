@@ -281,7 +281,7 @@ func (c *GryffClient) Read(key int64) (bool, int64) {
   c.mtx.Unlock()
 
   dlog.Printf("Starting Read(%d).\n", opId)
-
+  read := &gryffproto.Read{opId, c.id, state.Key(key), *c.dep}
   c.writer.WriteByte(clientproto.Gryff_READ)
   read.Marshal(c.writer)
   c.writer.Flush()
@@ -350,6 +350,10 @@ func (c *GryffClient) Write(key int64, value int64) bool {
   c.mtx.Unlock()
 
   dlog.Printf("Starting Write(%d).\n", opId)
+
+  write := &gryffproto.Write{opId, c.id, state.Key(key),
+      state.Value(value), *c.dep}
+	
   c.writer.WriteByte(clientproto.Gryff_WRITE)
   write.Marshal(c.writers)
   c.writer.Flush()
