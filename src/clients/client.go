@@ -131,48 +131,48 @@ func (c *AbstractClient) Finish() {
   }
 }
 
-// func (c *AbstractClient) ConnectToMaster() {
-//   log.Printf("Dialing master at addr %s:%d\n", c.masterAddr, c.masterPort)
-//   var err error
-// 	c.masterRPCClient, err = rpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
-//     c.masterAddr, c.masterPort))
-// 	if err != nil {
-//     log.Fatalf("Error connecting to master: %v\n", err)
-// 	}
+func (c *AbstractClient) ConnectToMaster() {
+  log.Printf("Dialing master at addr %s:%d\n", c.masterAddr, c.masterPort)
+  var err error
+	c.masterRPCClient, err = rpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
+    c.masterAddr, c.masterPort))
+	if err != nil {
+    log.Fatalf("Error connecting to master: %v\n", err)
+	}
 
-// 	rlReply := new(masterproto.GetReplicaListReply)
-// 	err = c.masterRPCClient.Call("Master.GetReplicaList",
-//     new(masterproto.GetReplicaListArgs), rlReply)
-// 	if err != nil {
-//     log.Fatalf("Error calling GetReplicaList: %v\n", err)
-// 	}
-//   log.Printf("Got replica list from master.\n")
-//   c.replicaAddrs = rlReply.ReplicaList
-//   c.numReplicas = len(c.replicaAddrs)
-//   c.replicaAlive = make([]bool, c.numReplicas)
-//   c.replicaPing = make([]uint64, c.numReplicas)
-//   c.replicasByPingRank = make([]int32, c.numReplicas)
-//   c.retries = make([]int, c.numReplicas)
-//   c.delayRPC = make([]map[uint8]bool, c.numReplicas)
-//   c.delayedRPC = make([]map[uint8]chan fastrpc.Serializable, c.numReplicas)
-//   for i := 0; i < c.numReplicas; i++ {
-//     c.delayRPC[i] = make(map[uint8]bool)
-//     c.delayedRPC[i] = make(map[uint8]chan fastrpc.Serializable)
-//   }
-// }
+	rlReply := new(masterproto.GetReplicaListReply)
+	err = c.masterRPCClient.Call("Master.GetReplicaList",
+    new(masterproto.GetReplicaListArgs), rlReply)
+	if err != nil {
+    log.Fatalf("Error calling GetReplicaList: %v\n", err)
+	}
+  log.Printf("Got replica list from master.\n")
+  c.replicaAddrs = rlReply.ReplicaList
+  c.numReplicas = len(c.replicaAddrs)
+  c.replicaAlive = make([]bool, c.numReplicas)
+  c.replicaPing = make([]uint64, c.numReplicas)
+  c.replicasByPingRank = make([]int32, c.numReplicas)
+  c.retries = make([]int, c.numReplicas)
+  c.delayRPC = make([]map[uint8]bool, c.numReplicas)
+  c.delayedRPC = make([]map[uint8]chan fastrpc.Serializable, c.numReplicas)
+  for i := 0; i < c.numReplicas; i++ {
+    c.delayRPC[i] = make(map[uint8]bool)
+    c.delayedRPC[i] = make(map[uint8]chan fastrpc.Serializable)
+  }
+}
 
-// func (c *AbstractClient) ConnectToReplicas() {
-//   log.Printf("Connecting to replicas...\n")
-//   c.replicas = make([]net.Conn, c.numReplicas)
-// 	c.readers = make([]*bufio.Reader, c.numReplicas)
-// 	c.writers = make([]*bufio.Writer, c.numReplicas)
-//   for i := 0; i < c.numReplicas; i++ {
-//     if !c.connectToReplica(i) {
-//       log.Fatalf("Must connect to all replicas on startup.\n")
-//     }
-// 	}
-//   log.Printf("Successfully connected to all %d replicas.\n", c.numReplicas)
-// }
+func (c *AbstractClient) ConnectToReplicas() {
+  log.Printf("Connecting to replicas...\n")
+  c.replicas = make([]net.Conn, c.numReplicas)
+	c.readers = make([]*bufio.Reader, c.numReplicas)
+	c.writers = make([]*bufio.Writer, c.numReplicas)
+  for i := 0; i < c.numReplicas; i++ {
+    if !c.connectToReplica(i) {
+      log.Fatalf("Must connect to all replicas on startup.\n")
+    }
+	}
+  log.Printf("Successfully connected to all %d replicas.\n", c.numReplicas)
+}
 
 func (c *AbstractClient) connectToReplica() bool {
 	var err error
