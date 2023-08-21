@@ -264,7 +264,7 @@ func (c *AbstractClient) pingReplica(i int, done chan bool) {
     case <-time.After(TIMEOUT_SECS * time.Second):
       log.Printf("Timeout out pinging replica %d.\n", i)
       for c.retries[i] < MAX_RETRIES {
-        if c.connectToReplica(i) {
+        if c.connectToReplica() {
           c.pingReplica(i, done)
           return
         }
