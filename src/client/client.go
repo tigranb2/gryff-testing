@@ -164,11 +164,11 @@ func main() {
 	
 	for i := 0; i < *T; i++ {
 
-		// automatically allocate clients equally
-		leader := 0
-		if *singleClusterTest {
-			leader = i % 3
-		}
+		// // automatically allocate clients equally
+		// leader := 0
+		// if *singleClusterTest {
+		// 	leader = i % 3
+		// }
 
 		//server, err := net.Dial("tcp", rlReply.ReplicaList[leader])
 		//if err != nil {
