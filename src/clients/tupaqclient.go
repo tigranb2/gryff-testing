@@ -282,11 +282,15 @@ func (c *GryffClient) Read(key int64) (bool, int64) {
 
   dlog.Printf("Starting Read(%d).\n", opId)
 
-  if c.proxy {
-    c.sendReadToNearest(opId, state.Key(key))
-  } else {
-    c.coord.StartRead(opId, c.id, state.Key(key), c.dep)
-  }
+  c.writer.WriteByte(clientproto.Gryff_READ)
+  read.Marshal(c.writer)
+  c.writer.Flush()
+	
+  // if c.proxy {
+  //   c.sendReadToNearest(opId, state.Key(key))
+  // } else {
+  //   c.coord.StartRead(opId, c.id, state.Key(key), c.dep)
+  // }
 
   <-doneChan
   if c.sequential {
@@ -346,12 +350,15 @@ func (c *GryffClient) Write(key int64, value int64) bool {
   c.mtx.Unlock()
 
   dlog.Printf("Starting Write(%d).\n", opId)
-
-  if c.proxy {
-    c.sendWriteToNearest(opId, state.Key(key), state.Value(value))
-  } else {
-    c.coord.StartWrite(opId, c.id, state.Key(key), state.Value(value), c.dep)
-  }
+  c.writer.WriteByte(clientproto.Gryff_WRITE)
+  write.Marshal(c.writers)
+  c.writer.Flush()
+	
+  // if c.proxy {
+  //   c.sendWriteToNearest(opId, state.Key(key), state.Value(value))
+  // } else {
+  //   c.coord.StartWrite(opId, c.id, state.Key(key), state.Value(value), c.dep)
+  // }
 
   <-doneChan
   if c.sequential {
