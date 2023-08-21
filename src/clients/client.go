@@ -39,7 +39,7 @@ type Client interface {
     newValue int64) (bool, int64)
   Finish()
   ConnectToMaster()
-  ConnectToReplicas()
+  ConnectToReplica()
   DetermineLeader()
   DetermineReplicaPings()
   DelayRPC(replica int, opCode uint8)
@@ -47,8 +47,8 @@ type Client interface {
 
 type AbstractClient struct {
   id int32
-  masterAddr string
-  masterPort int
+  serverAddr string
+  serverPort int
   forceLeader int
   stats *stats.StatsMap
   statsFile string
@@ -59,7 +59,7 @@ type AbstractClient struct {
   masterRPCClient *rpc.Client
   replicaAddrs []string
   numReplicas int
-	replicas []net.Conn
+  replica net.Conn
   readers []*bufio.Reader
   writers []*bufio.Writer
   shutdown bool
@@ -104,10 +104,10 @@ func NewAbstractClient(id int32, masterAddr string, masterPort int, forceLeader 
   }
   c.RegisterRPC(new(clientproto.PingReply), clientproto.GEN_PING_REPLY, c.pingReplyChan)
 
-  c.ConnectToMaster()
-  c.ConnectToReplicas()
-  c.DetermineLeader()
-  c.DetermineReplicaPings()
+  //c.ConnectToMaster()
+  c.ConnectToReplica()
+  //c.DetermineLeader()
+  //c.DetermineReplicaPings()
 
   return c
 }
@@ -125,60 +125,55 @@ func (c *AbstractClient) Finish() {
   }
 }
 
-func (c *AbstractClient) ConnectToMaster() {
-  log.Printf("Dialing master at addr %s:%d\n", c.masterAddr, c.masterPort)
-  var err error
-	c.masterRPCClient, err = rpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
-    c.masterAddr, c.masterPort))
-	if err != nil {
-    log.Fatalf("Error connecting to master: %v\n", err)
-	}
+// func (c *AbstractClient) ConnectToMaster() {
+//   log.Printf("Dialing master at addr %s:%d\n", c.masterAddr, c.masterPort)
+//   var err error
+// 	c.masterRPCClient, err = rpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
+//     c.masterAddr, c.masterPort))
+// 	if err != nil {
+//     log.Fatalf("Error connecting to master: %v\n", err)
+// 	}
 
-	rlReply := new(masterproto.GetReplicaListReply)
-	err = c.masterRPCClient.Call("Master.GetReplicaList",
-    new(masterproto.GetReplicaListArgs), rlReply)
-	if err != nil {
-    log.Fatalf("Error calling GetReplicaList: %v\n", err)
-	}
-  log.Printf("Got replica list from master.\n")
-  c.replicaAddrs = rlReply.ReplicaList
-  c.numReplicas = len(c.replicaAddrs)
-  c.replicaAlive = make([]bool, c.numReplicas)
-  c.replicaPing = make([]uint64, c.numReplicas)
-  c.replicasByPingRank = make([]int32, c.numReplicas)
-  c.retries = make([]int, c.numReplicas)
-  c.delayRPC = make([]map[uint8]bool, c.numReplicas)
-  c.delayedRPC = make([]map[uint8]chan fastrpc.Serializable, c.numReplicas)
-  for i := 0; i < c.numReplicas; i++ {
-    c.delayRPC[i] = make(map[uint8]bool)
-    c.delayedRPC[i] = make(map[uint8]chan fastrpc.Serializable)
-  }
-}
+// 	rlReply := new(masterproto.GetReplicaListReply)
+// 	err = c.masterRPCClient.Call("Master.GetReplicaList",
+//     new(masterproto.GetReplicaListArgs), rlReply)
+// 	if err != nil {
+//     log.Fatalf("Error calling GetReplicaList: %v\n", err)
+// 	}
+//   log.Printf("Got replica list from master.\n")
+//   c.replicaAddrs = rlReply.ReplicaList
+//   c.numReplicas = len(c.replicaAddrs)
+//   c.replicaAlive = make([]bool, c.numReplicas)
+//   c.replicaPing = make([]uint64, c.numReplicas)
+//   c.replicasByPingRank = make([]int32, c.numReplicas)
+//   c.retries = make([]int, c.numReplicas)
+//   c.delayRPC = make([]map[uint8]bool, c.numReplicas)
+//   c.delayedRPC = make([]map[uint8]chan fastrpc.Serializable, c.numReplicas)
+//   for i := 0; i < c.numReplicas; i++ {
+//     c.delayRPC[i] = make(map[uint8]bool)
+//     c.delayedRPC[i] = make(map[uint8]chan fastrpc.Serializable)
+//   }
+// }
 
-func (c *AbstractClient) ConnectToReplicas() {
-  log.Printf("Connecting to replicas...\n")
-  c.replicas = make([]net.Conn, c.numReplicas)
-	c.readers = make([]*bufio.Reader, c.numReplicas)
-	c.writers = make([]*bufio.Writer, c.numReplicas)
-  for i := 0; i < c.numReplicas; i++ {
-    if !c.connectToReplica(i) {
-      log.Fatalf("Must connect to all replicas on startup.\n")
-    }
-	}
-  log.Printf("Successfully connected to all %d replicas.\n", c.numReplicas)
-}
+// func (c *AbstractClient) ConnectToReplicas() {
+//   log.Printf("Connecting to replicas...\n")
+//   c.replicas = make([]net.Conn, c.numReplicas)
+// 	c.readers = make([]*bufio.Reader, c.numReplicas)
+// 	c.writers = make([]*bufio.Writer, c.numReplicas)
+//   for i := 0; i < c.numReplicas; i++ {
+//     if !c.connectToReplica(i) {
+//       log.Fatalf("Must connect to all replicas on startup.\n")
+//     }
+// 	}
+//   log.Printf("Successfully connected to all %d replicas.\n", c.numReplicas)
+// }
 
-func (c *AbstractClient) connectToReplica(i int) bool {
+func (c *AbstractClient) connectToReplica() bool {
 	var err error
-  if c.replicas[i] != nil {
-    c.replicas[i].Close()
-  }
-  c.retries[i]++
-  log.Printf("Dialing replica %d with addr %s\n", i,
-    c.replicaAddrs[i])
-  c.replicas[i], err = net.Dial("tcp", c.replicaAddrs[i])
+  log.Printf("Dialing replica with addr %s\n", c.serverAddr)
+  c.replicas, err = net.Dial("tcp", fmt.Sprintf("%s:%d", c.serverAddr, c.serverPort))
   if err != nil {
-    log.Printf("Error connecting to replica %d: %v\n", i, err)
+    log.Printf("Error connecting to replica %d: %s\n", c.serverAddr, err)
     return false
   }
   log.Printf("Connected to replica %d with connection %s\n", i, c.replicas[i].LocalAddr().String())
