@@ -161,7 +161,7 @@ func main() {
 
 	//startTime := rand.New(rand.NewSource(time.Now().UnixNano()))
 	experimentStart := time.Now()
-
+	
 	for i := 0; i < *T; i++ {
 
 		// automatically allocate clients equally
