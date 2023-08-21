@@ -193,7 +193,7 @@ func main() {
 	}
 
 	if *singleClusterTest {
-		printerMultipeFile(readings, *serverID, experimentStart, rampDown, rampUp, timeout)
+		printerMultipleFile(readings, *serverID, experimentStart, rampDown, rampUp, timeout)
 	} else {
 		printer(readings)
 	}
