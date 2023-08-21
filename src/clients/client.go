@@ -62,6 +62,8 @@ type AbstractClient struct {
   replica net.Conn
   readers []*bufio.Reader
   writers []*bufio.Writer
+  reader *bufio.Reader
+  writer *bufio.Writer	
   shutdown bool
   leader int
   pingReplyChan chan fastrpc.Serializable
@@ -171,23 +173,23 @@ func (c *AbstractClient) Finish() {
 func (c *AbstractClient) connectToReplica() bool {
 	var err error
   log.Printf("Dialing replica with addr %s\n", c.serverAddr)
-  c.replicas, err = net.Dial("tcp", fmt.Sprintf("%s:%d", c.serverAddr, c.serverPort))
+  c.replica, err = net.Dial("tcp", fmt.Sprintf("%s:%d", c.serverAddr, c.serverPort))
   if err != nil {
     log.Printf("Error connecting to replica %d: %s\n", c.serverAddr, err)
     return false
   }
-  log.Printf("Connected to replica %d with connection %s\n", i, c.replicas[i].LocalAddr().String())
-  c.readers[i] = bufio.NewReader(c.replicas[i])
-  c.writers[i] = bufio.NewWriter(c.replicas[i])
+  log.Printf("Connected to replica with addr %s\n", c.serverAddr)
+  c.reader = bufio.NewReader(c.replica)
+  c.writer = bufio.NewWriter(c.replica)
 
   var idBytes [4]byte
   idBytesS := idBytes[:4]
   binary.LittleEndian.PutUint32(idBytesS, uint32(c.id))
-  c.writers[i].Write(idBytesS)
-  c.writers[i].Flush()
+  c.writer.Write(idBytesS)
+  c.writer.Flush()
 
-  c.replicaAlive[i] = true
-  go c.replicaListener(i)
+  // c.replicaAlive[i] = true
+  go c.replicaListener()
   return true
 }
 
@@ -287,20 +289,20 @@ func (c *AbstractClient) ShouldDelayNextRPC(replica int, opCode uint8) bool {
   return ok && delay
 }
 
-func (c *AbstractClient) replicaListener(replica int) {
+func (c *AbstractClient) replicaListener() {
   var msgType byte
   var err error
   var errS string
   for !c.shutdown && err == nil {
-    if msgType, err = c.readers[replica].ReadByte(); err != nil {
+    if msgType, err = c.reader.ReadByte(); err != nil {
       errS = "reading opcode"
 			break
 		}
-    dlog.Printf("Received opcode %d from replica %d.\n", msgType, replica)
+    dlog.Printf("Received opcode %d from.\n", msgType)
 
     if rpair, present := c.rpcTable[msgType]; present {
 			obj := rpair.Obj.New()
-			if err = obj.Unmarshal(c.readers[replica]); err != nil {
+			if err = obj.Unmarshal(c.reader); err != nil {
         errS = "unmarshling message"
         break
 			} 
@@ -310,7 +312,7 @@ func (c *AbstractClient) replicaListener(replica int) {
 		}
 	}
   if err != nil && err != io.EOF {
-    log.Printf("Error %s from replica %d: %v\n", errS, replica, err) 
-    c.replicaAlive[replica] = false
+    log.Printf("Error %s from replica: %v\n", errS, err) 
+    // c.replicaAlive[replica] = false
   }
 }
