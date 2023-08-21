@@ -91,11 +91,11 @@ func NewAbstractClient(id int32, serverAddr string, serverPort int, forceLeader 
     make([]string, 0),              // replicaAddrs
     -1,                             // numReplicas
     nil,		            // replica
-    nil,                             // replicas
-    []*bufio.Reader,                // readers
-    []*bufio.Writer,                // writers
-    nil,      			    // reader
-    nil,                            // writer
+    nil,                            // replicas
+    nil,                            // readers
+    nil,                            // writers
+    false,      	            // reader
+    false,                          // writer
     false,                          // shutdown
     -1,                             // leader
     make(chan fastrpc.Serializable, // pingReplyChan
