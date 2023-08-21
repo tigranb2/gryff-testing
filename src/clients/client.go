@@ -91,9 +91,9 @@ func NewAbstractClient(id int32, serverAddr string, serverPort int, forceLeader 
     make([]string, 0),              // replicaAddrs
     -1,                             // numReplicas
     nil,		            // replica
-    make([]net.Conn),            // replicas
-    make([]*bufio.Reader),       // readers
-    make([]*bufio.Writer),       // writers
+    []net.Conn,                     // replicas
+    []*bufio.Reader,                // readers
+    []*bufio.Writer,                // writers
     nil,      			    // reader
     nil,                            // writer
     false,                          // shutdown
