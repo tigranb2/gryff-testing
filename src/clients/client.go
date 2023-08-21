@@ -39,7 +39,7 @@ type Client interface {
     newValue int64) (bool, int64)
   Finish()
   ConnectToMaster()
-  ConnectToReplica()
+  ConnectToReplicas()
   DetermineLeader()
   DetermineReplicaPings()
   DelayRPC(replica int, opCode uint8)
@@ -111,7 +111,7 @@ func NewAbstractClient(id int32, serverAddr string, serverPort int, forceLeader 
   c.RegisterRPC(new(clientproto.PingReply), clientproto.GEN_PING_REPLY, c.pingReplyChan)
 
   //c.ConnectToMaster()
-  c.ConnectToReplica()
+  c.connectToReplica()
   //c.DetermineLeader()
   //c.DetermineReplicaPings()
 
