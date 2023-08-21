@@ -90,7 +90,7 @@ func NewAbstractClient(id int32, serverAddr string, serverPort int, forceLeader 
     nil,                            // masterRPCClient
     make([]string, 0),              // replicaAddrs
     -1,                             // numReplicas
-    0,				    // replica
+    nil,		            // replica
     make([]net.Conn, 0),            // replicas
     make([]*bufio.Reader, 0),       // readers
     make([]*bufio.Writer, 0),       // writers
