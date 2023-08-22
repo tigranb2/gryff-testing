@@ -145,10 +145,10 @@ func NewGryffClient(id int32, masterAddr string, masterPort int,
   tc.RegisterRPC(new(gryffproto.RMWReply), clientproto.Gryff_RMW_REPLY,
     tc.rmwReplyChan)
 
-  tc.defaultReplicaOrder = make([]int32, tc.numReplicas)
-  for i := 0; i < tc.numReplicas; i++ {
-		tc.defaultReplicaOrder[i] = int32((int(tc.id) % tc.numReplicas + 1 + i) % tc.numReplicas)
-  }
+  // tc.defaultReplicaOrder = make([]int32, tc.numReplicas)
+  // for i := 0; i < tc.numReplicas; i++ {
+		// tc.defaultReplicaOrder[i] = int32((int(tc.id) % tc.numReplicas + 1 + i) % tc.numReplicas)
+  // }
 
   go tc.run()
 
