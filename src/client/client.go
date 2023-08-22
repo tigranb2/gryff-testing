@@ -263,7 +263,9 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 				queuedReqs += 1
 			}
 		}
-		log.Println("writing ....")
+		if *serverID == 4 {
+			log.Println("writing ....")
+		}
 
 		before := time.Now()
 		var after time.Time
@@ -294,6 +296,10 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 		orInfo.startTimes[id] = before
 		orInfo.Unlock()
 
+		if *serverID == 4 {
+			log.Println("reading ....")
+		}
+		
 		orInfo.sema.Release(1)
 		rtt := (after.Sub(before)).Seconds() * 1000
 		//commitToExec := float64(reply.Timestamp) / 1e6
