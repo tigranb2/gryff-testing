@@ -169,6 +169,7 @@ func main() {
 		if *singleClusterTest {
 			leader = i % 3 // change hard-coded value
 		}
+		log.Println(leader)
 
 		//server, err := net.Dial("tcp", rlReply.ReplicaList[leader])
 		//if err != nil {
