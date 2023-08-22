@@ -78,6 +78,7 @@ var epaxosMode *bool = flag.Bool(
 
 var masterAddr *string = flag.String("maddr", "", "Master address. Defaults to localhost")
 var masterPort *int = flag.Int("mport", 7087, "Master port.")
+var serverID *int = flag.Int("serverID", 7070, "Server to connect to.")
 var procs *int = flag.Int("p", 2, "GOMAXPROCS.")
 var conflicts *int = flag.Int("c", 0, "Percentage of conflicts. If -1, uses Zipfian distribution.")
 var forceLeader = flag.Int("l", -1, "Force client to talk to a certain replica. Does not work in this version of the repo")
@@ -166,7 +167,7 @@ func main() {
 		// automatically allocate clients equally
 		leader := 0
 		if *singleClusterTest {
-			leader = i % 3
+			leader = i % 3 // change hard-coded value
 		}
 
 		//server, err := net.Dial("tcp", rlReply.ReplicaList[leader])
@@ -185,7 +186,7 @@ func main() {
 		//waitTime := startTime.Intn(3)
 		//time.Sleep(time.Duration(waitTime) * 100 * 1e6)
 
-		go simulatedClientWriter(orInfo, readings, leader, i)
+		go simulatedClientWriter(orInfo, readings, *serverID, i)
 		//go simulatedClientReader(reader, orInfo, readings, leader)
 
 		orInfos[i] = orInfo
@@ -199,7 +200,7 @@ func main() {
 }
 
 func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *response, leader int, clientId int) {
-	client := createClient(int32(clientId), clientId % 3)
+	client := createClient(int32(clientId), leader)
 	//var opString string
 	var opType OpType
 	var k int64
