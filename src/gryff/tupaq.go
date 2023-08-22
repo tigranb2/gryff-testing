@@ -251,6 +251,7 @@ func (r *Replica) TagSeen(tag *gryffproto.Tag) {
  * gryffcommon.IGryffCoordinator methods
  */
 func (r *Replica) SendRead1(rop *gryffcommon.ReadOp, replicas []int32) {
+	log.Println("Sending operation r1")
 	r.read1.RequestId = rop.RequestId
 	r.read1.ClientId = rop.ClientId
 	r.read1.K = state.Key(rop.Key)
@@ -267,6 +268,7 @@ func (r *Replica) SendRead1(rop *gryffcommon.ReadOp, replicas []int32) {
 }
 
 func (r *Replica) SendRead2(rop *gryffcommon.ReadOp, replicas []int32) {
+	log.Println("Sending operation r2")
 	r.read2.RequestId = rop.RequestId
 	r.read2.ClientId = rop.ClientId
 	r.read2.K = state.Key(rop.Key)
@@ -280,6 +282,7 @@ func (r *Replica) SendRead2(rop *gryffcommon.ReadOp, replicas []int32) {
 }
 
 func (r *Replica) SendWrite1(wop *gryffcommon.WriteOp, replicas []int32) {
+	log.Println("Sending operation w1")
 	r.write1.RequestId = wop.RequestId
 	r.write1.ClientId = wop.ClientId
 	r.write1.N = wop.N
@@ -296,6 +299,7 @@ func (r *Replica) SendWrite1(wop *gryffcommon.WriteOp, replicas []int32) {
 }
 
 func (r *Replica) SendWrite2(wop *gryffcommon.WriteOp, replicas []int32) {
+	log.Println("Sending operation w2")
 	r.write2.RequestId = wop.RequestId
 	r.write2.ClientId = wop.ClientId
 	r.write2.N = wop.N
@@ -310,6 +314,7 @@ func (r *Replica) SendWrite2(wop *gryffcommon.WriteOp, replicas []int32) {
 
 func (r *Replica) CompleteRead(requestId int32, clientId int32,
 	success bool, readValue int64) {
+	log.Println("Completed operation r")
 	var ok uint8
 	if success {
 		ok = 1
@@ -328,6 +333,7 @@ func (r *Replica) CompleteRead(requestId int32, clientId int32,
 
 func (r *Replica) CompleteWrite(requestId int32, clientId int32,
 	success bool) {
+	log.Println("Completed operation r")
 	var ok uint8
 	if success {
 		ok = 1
@@ -376,24 +382,28 @@ func (r *Replica) sync() {
 }
 
 func (r *Replica) replyRead1(w *bufio.Writer, reply *gryffproto.Read1Reply) {
+	log.Println("Reply operation r1")
 	w.WriteByte(clientproto.Gryff_READ_1_REPLY)
 	reply.Marshal(w)
 	w.Flush()
 }
 
 func (r *Replica) replyRead2(w *bufio.Writer, reply *gryffproto.Read2Reply) {
+	log.Println("Reply operation r2")
 	w.WriteByte(clientproto.Gryff_READ_2_REPLY)
 	reply.Marshal(w)
 	w.Flush()
 }
 
 func (r *Replica) replyWrite1(w *bufio.Writer, reply *gryffproto.Write1Reply) {
+	log.Println("Reply operation w1")
 	w.WriteByte(clientproto.Gryff_WRITE_1_REPLY)
 	reply.Marshal(w)
 	w.Flush()
 }
 
 func (r *Replica) replyWrite2(w *bufio.Writer, reply *gryffproto.Write2Reply) {
+	log.Println("Reply operation w2")
 	w.WriteByte(clientproto.Gryff_WRITE_2_REPLY)
 	reply.Marshal(w)
 	w.Flush()
@@ -401,6 +411,7 @@ func (r *Replica) replyWrite2(w *bufio.Writer, reply *gryffproto.Write2Reply) {
 
 func (r *Replica) replyWrite1Replica(coordinatorId int32,
 	write1Reply *gryffproto.Write1Reply) {
+	log.Println("Reply operation w1 rep")
 	if coordinatorId == r.Id {
 		r.write1ReplyChan <- write1Reply
 	} else {
@@ -410,6 +421,7 @@ func (r *Replica) replyWrite1Replica(coordinatorId int32,
 
 func (r *Replica) replyWrite2Replica(coordinatorId int32,
 	write2Reply *gryffproto.Write2Reply) {
+	log.Println("Reply operation w2 rep")
 	if coordinatorId == r.Id {
 		r.write2ReplyChan <- write2Reply
 	} else {
@@ -419,6 +431,7 @@ func (r *Replica) replyWrite2Replica(coordinatorId int32,
 
 func (r *Replica) replyRead1Replica(coordinatorId int32,
 	read1Reply *gryffproto.Read1Reply) {
+	log.Println("Reply operation r1 rep")
 	if coordinatorId == r.Id {
 		r.read1ReplyChan <- read1Reply
 	} else {
@@ -428,6 +441,7 @@ func (r *Replica) replyRead1Replica(coordinatorId int32,
 
 func (r *Replica) replyRead2Replica(coordinatorId int32,
 	read2Reply *gryffproto.Read2Reply) {
+	log.Println("Reply operation r2 rep")
 	if coordinatorId == r.Id {
 		r.read2ReplyChan <- read2Reply
 	} else {
