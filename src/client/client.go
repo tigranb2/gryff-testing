@@ -194,7 +194,7 @@ func main() {
 	}
 
 	if *singleClusterTest {
-		printerMultipeFile(readings, 3, experimentStart, rampDown, rampUp, timeout)
+		printerMultipleFile(readings, *serverID, experimentStart, rampDown, rampUp, timeout)
 	} else {
 		printer(readings)
 	}
@@ -401,31 +401,26 @@ func printer(readings chan *response) {
 	}
 }
 
-func printerMultipeFile(readings chan *response, numLeader int, experimentStart time.Time, rampDown, rampUp, timeout *int) {
+func printerMultipleFile(readings chan *response, replicaID int, experimentStart time.Time, rampDown, rampUp, timeout *int) {
 	lattputFile, err := os.Create("lattput.txt")
 	if err != nil {
 		log.Println("Error creating lattput file", err)
 		return
 	}
 
-	latFileRead := make([]*os.File, numLeader)
-	latFileWrite := make([]*os.File, numLeader)
+	fileName := fmt.Sprintf("latFileRead-%d.txt", replicaID)
+	latFileRead, err := os.Create(fileName)
+	if err != nil {
+		log.Println("Error creating latency file", err)
+		return
+	}
+	//latFile.WriteString("# time (ns), latency, commit latency\n")
 
-	for i := 0; i < numLeader; i++ {
-		fileName := fmt.Sprintf("latFileRead-%d.txt", i)
-		latFileRead[i], err = os.Create(fileName)
-		if err != nil {
-			log.Println("Error creating latency file", err)
-			return
-		}
-		//latFile.WriteString("# time (ns), latency, commit latency\n")
-
-		fileName = fmt.Sprintf("latFileWrite-%d.txt", i)
-		latFileWrite[i], err = os.Create(fileName)
-		if err != nil {
-			log.Println("Error creating latency file", err)
-			return
-		}
+	fileName = fmt.Sprintf("latFileWrite-%d.txt", replicaID)
+	latFileWrite, err := os.Create(fileName)
+	if err != nil {
+		log.Println("Error creating latency file", err)
+		return
 	}
 
 	startTime := time.Now()
@@ -440,19 +435,16 @@ func printerMultipeFile(readings chan *response, numLeader int, experimentStart 
 		currentRuntime := time.Now().Sub(experimentStart)
 		for i := 0; i < count; i++ {
 			resp := <-readings
-
-			//currentRuntime := time.Now().Sub(experimentStart)
-
- 			// Log all to latency file if they are not within the ramp up or ramp down period.
- 			if *rampUp < int(currentRuntime.Seconds()) && int(currentRuntime.Seconds()) < *timeout - *rampDown {
- 				if resp.isRead {
- 					latFileRead[resp.replicaID].WriteString(fmt.Sprintf("%d %f %f\n", resp.receivedAt.UnixNano(), resp.rtt, resp.commitLatency))
- 				} else {
- 					latFileWrite[resp.replicaID].WriteString(fmt.Sprintf("%d %f %f\n", resp.receivedAt.UnixNano(), resp.rtt, resp.commitLatency))
- 				}
- 				sum += resp.rtt
- 				commitSum += resp.commitLatency
- 				endTime = resp.receivedAt
+			// Log all to latency file if they are not within the ramp up or ramp down period.
+			if *rampUp < int(currentRuntime.Seconds()) && int(currentRuntime.Seconds()) < *timeout-*rampDown {
+				if resp.isRead {
+					latFileRead.WriteString(fmt.Sprintf("%d %f %f\n", resp.receivedAt.UnixNano(), resp.rtt, resp.commitLatency))
+				} else {
+					latFileWrite.WriteString(fmt.Sprintf("%d %f %f\n", resp.receivedAt.UnixNano(), resp.rtt, resp.commitLatency))
+				}
+				sum += resp.rtt
+				commitSum += resp.commitLatency
+				endTime = resp.receivedAt
 			}
 		}
 
@@ -474,9 +466,8 @@ func printerMultipeFile(readings chan *response, numLeader int, experimentStart 
 
 		// Log summary to lattput file
 		//lattputFile.WriteString(fmt.Sprintf("%d %f %f %d %d %f\n", endTime.UnixNano(), avg, tput, count, totalOrs, avgCommit))
-
 		// Log all to latency file if they are not within the ramp up or ramp down period.
-		if *rampUp < int(currentRuntime.Seconds()) && int(currentRuntime.Seconds()) < *timeout - *rampDown {
+		if *rampUp < int(currentRuntime.Seconds()) && int(currentRuntime.Seconds()) < *timeout-*rampDown {
 			lattputFile.WriteString(fmt.Sprintf("%d %f %f %d %d %f\n", endTime.UnixNano(), avg, tput, count, totalOrs, avgCommit))
 		}
 		startTime = endTime
