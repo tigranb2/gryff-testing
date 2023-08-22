@@ -9,7 +9,7 @@ package gryff
 import "C"
 
 import (
-	//  "log"
+	"log"
 	"bufio"
 	"clientproto"
 	"dlog"
