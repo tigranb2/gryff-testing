@@ -161,6 +161,9 @@ func main() {
 
 	//startTime := rand.New(rand.NewSource(time.Now().UnixNano()))
 	experimentStart := time.Now()
+	if *serverID == 4 {
+		log.Println("Hello world!")
+	}
 	
 	for i := 0; i < *T; i++ {
 
@@ -214,7 +217,10 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 	opRand := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	queuedReqs := 0 // The number of poisson departures that have been missed
-
+	if *serverID == 4 {
+		log.Println("Preparing to write ....")
+	}
+	
 	for id := int32(0); ; id++ {
 		//args.CommandId = id
 
@@ -233,6 +239,9 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 			//args.Command.K = state.Key(zipf.NextNumber())
 			k = int64(zipf.NextNumber())
 		}
+		if *serverID == 4 {
+			log.Println("Got key ....")
+		}
 
 		// Determine operation type
 		if *percentWrites > opRand.Float64() {
@@ -245,6 +254,9 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 		} else {
 			//args.Command.Op = state.GET // read operation
 			opType = READ
+		}
+		if *serverID == 4 {
+			log.Println("Chose operation ....")
 		}
 
 		if *poissonAvg == -1 { // Poisson disabled
