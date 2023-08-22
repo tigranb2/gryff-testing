@@ -166,7 +166,7 @@ func main() {
 		// automatically allocate clients equally
 		leader := 0
 		if *singleClusterTest {
-			leader = i % 3
+			leader = i % 3 // change hard-coded value
 		}
 
 		//server, err := net.Dial("tcp", rlReply.ReplicaList[leader])
