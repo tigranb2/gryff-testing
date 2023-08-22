@@ -263,6 +263,7 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 				queuedReqs += 1
 			}
 		}
+		log.Println("writing ....")
 
 		before := time.Now()
 		var after time.Time
