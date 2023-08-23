@@ -89,6 +89,7 @@ var theta = flag.Float64("theta", 0.99, "Theta zipfian parameter")
 var zKeys = flag.Uint64("z", 1e9, "Number of unique keys in zipfian distribution.")
 var poissonAvg = flag.Int("poisson", -1, "The average number of microseconds between requests. -1 disables Poisson.")
 var percentWrites = flag.Float64("writes", 1, "A float between 0 and 1 that corresponds to the percentage of requests that should be writes. The remainder will be reads.")
+var percentRMWs = flag.Float64("rmws", 0, "A float between 0 and 1 that corresponds to the percentage of writes that should be RMWs. The remainder will be regular writes.")
 var blindWrites = flag.Bool("blindwrites", false, "True if writes don't need to execute before clients receive responses.")
 var singleClusterTest = flag.Bool("singleClusterTest", true, "True if clients run on a VM in a single cluster")
 var rampDown *int = flag.Int("rampDown", 15, "Length of the cool-down period after statistics are measured (in seconds).")
@@ -128,7 +129,7 @@ type response struct {
 	receivedAt    time.Time
 	rtt           float64 // The operation latency, in ms
 	commitLatency float64 // The operation's commit latency, in ms
-	isRead        bool
+	operation     OpType
 	replicaID     int
 }
 
@@ -138,7 +139,7 @@ type outstandingRequestInfo struct {
 	sync.Mutex
 	sema       *semaphore.Weighted // Controls number of outstanding operations
 	startTimes map[int32]time.Time // The time at which operations were sent out
-	isRead     map[int32]bool
+	operation     map[int32]OpType
 }
 
 // An outstandingRequestInfo per client thread
@@ -233,18 +234,21 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 			//args.Command.K = state.Key(zipf.NextNumber())
 			k = int64(zipf.NextNumber())
 		}
-
+		
 		// Determine operation type
-		if *percentWrites > opRand.Float64() {
-			if !*blindWrites {
-				//args.Command.Op = state.PUT // write operation
-				opType = WRITE
-			} else {
-				//args.Command.Op = state.PUT_BLIND
+		randNumber := opRand.Float64()
+		if *percentWrites+*percentRMWs > randNumber {
+			if *percentWrites > randNumber {
+				if !*blindWrites {
+					opType = WRITE // write operation
+				} else {
+					//args.Command.Op = state.PUT_BLIND
+				}
+			} else if *percentRMWs > 0 {
+				opType = RMW // RMW operation
 			}
 		} else {
-			//args.Command.Op = state.GET // read operation
-			opType = READ
+			opType = READ // read operation
 		}
 
 		if *poissonAvg == -1 { // Poisson disabled
@@ -270,10 +274,14 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 		if opType == READ {
 			//opString = "r"
 			success, _ = client.Read(k)
-		} else{// opType == WRITE {
+		} else if opType == WRITE {
 			//opString = "w"
 			success = client.Write(k, int64(id))
-		}
+		} else {
+        		//opString = "rmw"
+        		success, _ = client.CompareAndSwap(k, int64(count - 1),
+          		  int64(count))
+      		}
 		//writer.WriteByte(genericsmrproto.PROPOSE)
 		//args.Marshal(writer)
 		//writer.Flush()
@@ -286,10 +294,6 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 
 		orInfo.Lock()
 		//if args.Command.Op == state.GET {
-		isRead := false
-		if opType == READ {
-			isRead = true
-		}
 		orInfo.startTimes[id] = before
 		orInfo.Unlock()
 
@@ -302,14 +306,14 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 			after,
 			rtt,
 			commitLatency,
-			isRead,
+			opType,
 			leader}
 	}
 }
 
 func simulatedClientReader(reader *bufio.Reader, orInfo *outstandingRequestInfo, readings chan *response, leader int) {
 	var reply genericsmrproto.ProposeReplyTS
-
+	var opType OpType
 	for {
 		if err := reply.Unmarshal(reader); err != nil || reply.OK == 0 {
 			log.Println(reply.OK)
@@ -323,19 +327,20 @@ func simulatedClientReader(reader *bufio.Reader, orInfo *outstandingRequestInfo,
 
 		orInfo.Lock()
 		before := orInfo.startTimes[reply.CommandId]
-		isRead := orInfo.isRead[reply.CommandId]
+		//isRead := orInfo.isRead[reply.CommandId]
 		delete(orInfo.startTimes, reply.CommandId)
 		orInfo.Unlock()
 
 		rtt := (after.Sub(before)).Seconds() * 1000
 		//commitToExec := float64(reply.Timestamp) / 1e6
 		commitLatency := float64(0) //rtt - commitToExec
-
+		opType = READ
 		readings <- &response{
 			after,
 			rtt,
 			commitLatency,
-			isRead,
+			opType,
+			//isRead,
 			leader}
 
 	}
@@ -409,6 +414,7 @@ func printerMultipeFile(readings chan *response, numLeader int, experimentStart 
 
 	latFileRead := make([]*os.File, numLeader)
 	latFileWrite := make([]*os.File, numLeader)
+	latFileRMW := make([]*os.File, numLeader)
 
 	for i := 0; i < numLeader; i++ {
 		fileName := fmt.Sprintf("latFileRead-%d.txt", i)
@@ -425,6 +431,14 @@ func printerMultipeFile(readings chan *response, numLeader int, experimentStart 
 			log.Println("Error creating latency file", err)
 			return
 		}
+
+		fileName = fmt.Sprintf("latFileRMW-%d.txt", i)
+		latFileRMW[i], err = os.Create(fileName)
+		if err != nil {
+			log.Println("Error creating latency file", err)
+			return
+		}
+		
 	}
 
 	startTime := time.Now()
@@ -444,11 +458,13 @@ func printerMultipeFile(readings chan *response, numLeader int, experimentStart 
 
  			// Log all to latency file if they are not within the ramp up or ramp down period.
  			if *rampUp < int(currentRuntime.Seconds()) && int(currentRuntime.Seconds()) < *timeout - *rampDown {
- 				if resp.isRead {
+ 				if resp.operation == READ {
  					latFileRead[resp.replicaID].WriteString(fmt.Sprintf("%d %f %f\n", resp.receivedAt.UnixNano(), resp.rtt, resp.commitLatency))
- 				} else {
+ 				} else if resp.operation == WRITE {
  					latFileWrite[resp.replicaID].WriteString(fmt.Sprintf("%d %f %f\n", resp.receivedAt.UnixNano(), resp.rtt, resp.commitLatency))
- 				}
+ 				} else {
+					latFileRMW[resp.replicaID].WriteString(fmt.Sprintf("%d %f %f\n", resp.receivedAt.UnixNano(), resp.rtt, resp.commitLatency))
+				}
  				sum += resp.rtt
  				commitSum += resp.commitLatency
  				endTime = resp.receivedAt
