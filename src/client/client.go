@@ -78,6 +78,7 @@ var epaxosMode *bool = flag.Bool(
 
 var masterAddr *string = flag.String("maddr", "", "Master address. Defaults to localhost")
 var masterPort *int = flag.Int("mport", 7087, "Master port.")
+var replicaCount *int = flag.Int("rCount", 5, "Number of replicas that the client will connect to.")
 var procs *int = flag.Int("p", 2, "GOMAXPROCS.")
 var conflicts *int = flag.Int("c", 0, "Percentage of conflicts. If -1, uses Zipfian distribution.")
 var forceLeader = flag.Int("l", -1, "Force client to talk to a certain replica. Does not work in this version of the repo")
@@ -166,7 +167,7 @@ func main() {
 		// automatically allocate clients equally
 		leader := 0
 		if *singleClusterTest {
-			leader = i % 3 // change hard-coded value
+			leader = i % *replicaCount // change hard-coded value
 		}
 
 		//server, err := net.Dial("tcp", rlReply.ReplicaList[leader])
@@ -192,14 +193,14 @@ func main() {
 	}
 
 	if *singleClusterTest {
-		printerMultipeFile(readings, 3, experimentStart, rampDown, rampUp, timeout)
+		printerMultipeFile(readings, *replicaCount, experimentStart, rampDown, rampUp, timeout)
 	} else {
 		printer(readings)
 	}
 }
 
 func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *response, leader int, clientId int) {
-	client := createClient(int32(clientId), clientId % 3)
+	client := createClient(int32(clientId), leader)
 	//var opString string
 	var opType OpType
 	var k int64
