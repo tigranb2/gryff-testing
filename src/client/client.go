@@ -182,7 +182,7 @@ func main() {
 			sync.Mutex{},
 			semaphore.NewWeighted(*outstandingReqs),
 			make(map[int32]time.Time, *outstandingReqs),
-			make(map[int32]bool, *outstandingReqs)}
+			make(map[int32]OpType, *outstandingReqs)}
 
 		//waitTime := startTime.Intn(3)
 		//time.Sleep(time.Duration(waitTime) * 100 * 1e6)
@@ -279,8 +279,8 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 			success = client.Write(k, int64(id))
 		} else {
         		//opString = "rmw"
-        		success, _ = client.CompareAndSwap(k, int64(count - 1),
-          		  int64(count))
+        		success, _ = client.CompareAndSwap(k, int64(id - 1),
+          		  int64(id))
       		}
 		//writer.WriteByte(genericsmrproto.PROPOSE)
 		//args.Marshal(writer)
