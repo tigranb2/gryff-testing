@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"genericsmrproto"
-	"golang.org/x/sync/semaphore"
 	"log"
 	//"masterproto"
 	"math/rand"
@@ -137,7 +136,6 @@ type response struct {
 // yet received responses
 type outstandingRequestInfo struct {
 	sync.Mutex
-	sema       *semaphore.Weighted // Controls number of outstanding operations
 	startTimes map[int32]time.Time // The time at which operations were sent out
 	operation     map[int32]OpType
 }
@@ -180,7 +178,6 @@ func main() {
 
 		orInfo := &outstandingRequestInfo{
 			sync.Mutex{},
-			semaphore.NewWeighted(*outstandingReqs),
 			make(map[int32]time.Time, *outstandingReqs),
 			make(map[int32]OpType, *outstandingReqs)}
 
@@ -251,21 +248,9 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 			opType = READ // read operation
 		}
 
-		if *poissonAvg == -1 { // Poisson disabled
-			orInfo.sema.Acquire(context.Background(), 1)
-		} else {
-			for {
-				if orInfo.sema.TryAcquire(1) {
-					if queuedReqs == 0 {
-						time.Sleep(poissonGenerator.NextArrival())
-					} else {
-						queuedReqs -= 1
-					}
-					break
-				}
-				time.Sleep(poissonGenerator.NextArrival())
-				queuedReqs += 1
-			}
+		if *poissonAvg != -1 {
+			time.Sleep(poissonGenerator.NextArrival())
+			queuedReqs += 1
 		}
 
 		before := time.Now()
@@ -297,7 +282,6 @@ func simulatedClientWriter(orInfo *outstandingRequestInfo, readings chan *respon
 		orInfo.startTimes[id] = before
 		orInfo.Unlock()
 
-		orInfo.sema.Release(1)
 		rtt := (after.Sub(before)).Seconds() * 1000
 		//commitToExec := float64(reply.Timestamp) / 1e6
 		commitLatency := float64(0) //rtt - commitToExec
@@ -322,8 +306,6 @@ func simulatedClientReader(reader *bufio.Reader, orInfo *outstandingRequestInfo,
 			break
 		}
 		after := time.Now()
-
-		orInfo.sema.Release(1)
 
 		orInfo.Lock()
 		before := orInfo.startTimes[reply.CommandId]
