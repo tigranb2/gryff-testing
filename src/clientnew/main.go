@@ -206,10 +206,6 @@ func main() {
 		dlog.Println("Using zipfian distribution")
 	}
 
-  if *writes + *reads + *rmws != 1000 {
-    log.Fatalf("Writes (%d), reads (%d), and rmws (%d) must add up to 1000.\n", *writes, *reads, *rmws)
-  }
-
 	runtime.GOMAXPROCS(*maxProcessors)
   
   if *cpuProfile != "" {
