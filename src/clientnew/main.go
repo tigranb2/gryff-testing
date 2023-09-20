@@ -104,11 +104,6 @@ var randomLeader *bool = flag.Bool(
   false,
   "Egalitarian (no leader).")
 
-var reads *int = flag.Int(
-  "reads",
-  0,
-  "Percentage of reads.")
-
 var regular *bool = flag.Bool(
   "regular",
   false,
@@ -118,11 +113,6 @@ var replProtocol *string = flag.String(
   "replProtocol",
   "",
   "Replication protocol used by clients and servers.")
-
-var rmws *int = flag.Int(
-  "rmws",
-  0,
-  "Percentage of rmws.")
 
 var sequential *bool = flag.Bool(
   "sequential",
@@ -146,10 +136,9 @@ var thrifty *bool = flag.Bool(
   false,
   "Only initially send messages to nearest quorum of replicas.")
 
-var writes *int = flag.Int(
-  "writes",
-  100,
-  "Percentage of updates (writes).")
+var percentWrites = flag.Float64("writes", 1, "A float between 0 and 1 that corresponds to the percentage of requests that should be writes. The remainder will be reads.")
+var percentRMWs = flag.Float64("rmws", 0, "A float between 0 and 1 that corresponds to the percentage of writes that should be RMWs. The remainder will be regular writes.")
+
 
 var zipfS = flag.Float64(
   "zipfS",
@@ -266,15 +255,20 @@ func main() {
     var k int64
     maxLats := []int64{-1, -1, -1, -1} // one for each {w,r,rmw,overall}
     for i := 0; i < coalescedOps; i++ {
-      opTypeRoll := r.Intn(1000)
+      opRand := rand.New(rand.NewSource(time.Now().UnixNano()))
+	    
+      opTypeRoll := opRand.Float64()
       var opType OpType
-      if opTypeRoll < *reads {
-        opType = READ
-      } else if opTypeRoll < *reads + *writes {
-        opType = WRITE
+      if *percentWrites+*percentRMWs > opTypeRoll {
+        if *percentWrites > opTypeRoll {
+          opType = WRITE
+        } else if *percentRMWs > 0 {
+          opType = RMW
+	}
       } else {
-        opType = RMW
+        opType = READ
       }
+
       if *conflicts >= 0 {
         if r.Intn(*conflictsDenom) < *conflicts {
           k = 0
