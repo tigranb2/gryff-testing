@@ -20,7 +20,7 @@ var clientId *int = flag.Int(
   "Client identifier for use in replication protocols.")
 
 var conflicts *int = flag.Int(
-  "conflicts",
+  "c",
   -1,
   "Percentage of conflicts. If < 0, a zipfian distribution will be used for " +
   "choosing keys.")
@@ -68,6 +68,7 @@ var forceLeader *int = flag.Int(
 
 var masterAddr *string = flag.String("maddr", "", "Master address. Defaults to localhost")
 var masterPort *int = flag.Int("mport", 7087, "Master port.")
+var T = flag.Int("T", 1, "Number of threads (simulated clients).")
 
 var maxProcessors *int = flag.Int(
   "maxProcessors",
