@@ -319,3 +319,61 @@ func catchKill(interrupt chan os.Signal) {
 	log.Printf("Caught signal and stopped CPU profile before exit.\n")
 	os.Exit(0)
 }
+
+func printerMultipeFile(readings chan *response, experimentStart time.Time, rampDown, rampUp, timeout *int) {
+	latFileMAX, err := os.Create("latFile-MAX.txt")
+	if err != nil {
+		log.Println("Error creating lattput file", err)
+		return
+	}
+
+	startTime := time.Now()
+	for {
+		time.Sleep(time.Second)
+
+		count := len(readings)
+		var sum float64 = 0
+		var commitSum float64 = 0
+		endTime := time.Now() // Set to current time in case there are no readings
+		currentRuntime := time.Now().Sub(experimentStart)
+		for i := 0; i < count; i++ {
+			resp := <-readings
+
+			//currentRuntime := time.Now().Sub(experimentStart)
+
+ 			// Log all to latency file if they are not within the ramp up or ramp down period.
+ 			if *rampUp < int(currentRuntime.Seconds()) && int(currentRuntime.Seconds()) < *timeout - *rampDown {
+ 				latFileMAX.WriteString(fmt.Sprintf("%d %f %f\n", resp.receivedAt.UnixNano(), resp.commitLatency, resp.rtt))
+
+ 				sum += resp.rtt
+ 				commitSum += resp.commitLatency
+ 				endTime = resp.receivedAt
+			}
+		}
+
+		var avg float64
+		var avgCommit float64
+		var tput float64
+		if count > 0 {
+			avg = sum / float64(count)
+			avgCommit = commitSum / float64(count)
+			tput = float64(count) / endTime.Sub(startTime).Seconds()
+		}
+
+		totalOrs := 0
+		for i := 0; i < *T; i++ {
+			orInfos[i].Lock()
+			totalOrs += len(orInfos[i].startTimes)
+			orInfos[i].Unlock()
+		}
+
+		// Log summary to lattput file
+		//lattputFile.WriteString(fmt.Sprintf("%d %f %f %d %d %f\n", endTime.UnixNano(), avg, tput, count, totalOrs, avgCommit))
+
+		// // Log all to latency file if they are not within the ramp up or ramp down period.
+		// if *rampUp < int(currentRuntime.Seconds()) && int(currentRuntime.Seconds()) < *timeout - *rampDown {
+		// 	lattputFile.WriteString(fmt.Sprintf("%d %f %f %d %d %f\n", endTime.UnixNano(), avg, tput, count, totalOrs, avgCommit))
+		// }
+		startTime = endTime
+	}
+}
