@@ -69,6 +69,7 @@ var forceLeader *int = flag.Int(
 var masterAddr *string = flag.String("maddr", "", "Master address. Defaults to localhost")
 var masterPort *int = flag.Int("mport", 7087, "Master port.")
 var T = flag.Int("T", 1, "Number of threads (simulated clients).")
+var replicaCount *int = flag.Int("rCount", 5, "Number of replicas that the client will connect to.")
 
 var maxProcessors *int = flag.Int(
   "maxProcessors",
