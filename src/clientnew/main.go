@@ -66,15 +66,8 @@ var forceLeader *int = flag.Int(
   "Replica ID to which leader-based operations will be sent. If < 0, an " +
   "appropriate leader is chosen by default.")
 
-var masterAddr *string = flag.String(
-  "masterAddr",
-  "",
-  "Master address.")
-
-var masterPort *int = flag.Int(
-  "masterPort",
-  7087,
-  "Master port.")
+var masterAddr *string = flag.String("maddr", "", "Master address. Defaults to localhost")
+var masterPort *int = flag.Int("mport", 7087, "Master port.")
 
 var maxProcessors *int = flag.Int(
   "maxProcessors",
