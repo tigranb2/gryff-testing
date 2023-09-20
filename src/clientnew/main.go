@@ -162,21 +162,9 @@ const (
 )
 
 func createClient() clients.Client {
-  switch *replProtocol {
-    case "abd":
-      return clients.NewAbdClient(int32(*clientId), *masterAddr, *masterPort, *forceLeader,
-        *statsFile, *regular)
-    case "gryff":
-      return clients.NewGryffClient(int32(*clientId), *masterAddr, *masterPort, *forceLeader,
-        *statsFile, *regular, *sequential, *proxy, *thrifty, *defaultReplicaOrder,
-        *epaxosMode)
-    case "epaxos":
-      return clients.NewProposeClient(int32(*clientId), *masterAddr, *masterPort, *forceLeader,
-        *statsFile, false, true)
-    default:
-      return clients.NewProposeClient(int32(*clientId), *masterAddr, *masterPort, *forceLeader,
-        *statsFile, false, false)
-  }
+	return clients.NewGryffClient(int32(*clientId), *masterAddr, *masterPort, *forceLeader,
+		*statsFile, *regular, *sequential, *proxy, *thrifty, *defaultReplicaOrder,
+		*epaxosMode)
 }
 
 type RequestResult struct {
@@ -196,11 +184,13 @@ func Max(a int64, b int64) int64 {
 func main() {
 	flag.Parse()
 
+	 dlog.DLOG = *debug
+
+	runtime.GOMAXPROCS(*maxProcessors)
+	
 	if *conflicts > 100 {
 		log.Fatalf("Conflicts percentage must be between 0 and 100.\n")
 	}
-
-  dlog.DLOG = *debug
 
 	if *conflicts >= 0 {
 		dlog.Println("Using uniform distribution")
@@ -208,7 +198,6 @@ func main() {
 		dlog.Println("Using zipfian distribution")
 	}
 
-	runtime.GOMAXPROCS(*maxProcessors)
   
   if *cpuProfile != "" {
 		f, err := os.Create(*cpuProfile)
