@@ -96,6 +96,9 @@ var rampUp *int = flag.Int(
   5,
   "Length of the warm-up period before statistics are measured (in seconds).")
 
+var timeout *int = flag.Int("timeout", 180, "Length of the timeout used when running the client")
+
+
 var randSleep *int = flag.Int(
   "randSleep",
   0,
@@ -181,6 +184,13 @@ func Max(a int64, b int64) int64 {
   }
 }
 
+// Information about the latency of an operation
+type response struct {
+	receivedAt    time.Time
+	rtt           float64 // The operation latency, in ms
+	commitLatency float64 // The operation's commit latency, in ms
+}
+
 func main() {
 	flag.Parse()
 
@@ -233,14 +243,16 @@ func main() {
 
   start := time.Now()
   now := start
+  readings := make(chan *response, 100000)
   currRuntime := now.Sub(start)
+  go printerMultipeFile(readings, start, *rampDown, *rampUp, *timeout)
   for int(currRuntime.Seconds()) < *expLength {
     if *randSleep > 0 {
       time.Sleep(time.Duration(r.Intn(*randSleep * 1e6))) // randSleep ms
     }
     var opString string
     var k int64
-    maxLats := []int64{-1, -1, -1, -1} // one for each {w,r,rmw,overall}
+    maxLats := []float64{-1, -1, -1, -1} // one for each {w,r,rmw,overall}
     for i := 0; i < coalescedOps; i++ {
       opRand := rand.New(rand.NewSource(time.Now().UnixNano()))
 	    
@@ -281,7 +293,7 @@ func main() {
       }
       if success {
         after = time.Now()
-        lat := int64(after.Sub(before).Nanoseconds())
+        lat := (after.Sub(before)).Seconds() * 1000
         maxLats[3] = Max(maxLats[3], lat) 
         maxLats[opType] = Max(maxLats[opType], lat)
         if *tailAtScale >= 0 {
@@ -294,15 +306,10 @@ func main() {
       count++
       dlog.Printf("Requests attempted: %d\n", count)
     }
-    if *rampUp < int(currRuntime.Seconds()) && int(currRuntime.Seconds()) < *expLength - *rampDown {
-      if *tailAtScale == -1 {
-        fmt.Printf("%s,%d,%d,%d\n", opString,
-          int64(after.Sub(before).Nanoseconds()), k, count)
-      } else {
-        fmt.Printf("max,%d,maxw,%d,maxr,%d,maxrmw,%d\n",
-          maxLats[3], maxLats[0], maxLats[1], maxLats[2])
-      }
-    }
+    readings <- &response{
+	    		after,
+			maxLats[3],
+			0}
     now = time.Now()
     currRuntime = now.Sub(start)
   }
