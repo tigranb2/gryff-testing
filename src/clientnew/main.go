@@ -176,7 +176,7 @@ type RequestResult struct {
   typ OpType
 }
 
-func Max(a int64, b int64) int64 {
+func Max(a float64, b float64) float64 {
   if a > b {
     return a
   } else {
@@ -245,7 +245,7 @@ func main() {
   now := start
   readings := make(chan *response, 100000)
   currRuntime := now.Sub(start)
-  go printerMultipeFile(readings, start, *rampDown, *rampUp, *timeout)
+  go printerMultipeFile(readings, start, rampDown, rampUp, timeout)
   for int(currRuntime.Seconds()) < *expLength {
     if *randSleep > 0 {
       time.Sleep(time.Duration(r.Intn(*randSleep * 1e6))) // randSleep ms
@@ -365,13 +365,6 @@ func printerMultipeFile(readings chan *response, experimentStart time.Time, ramp
 			avg = sum / float64(count)
 			avgCommit = commitSum / float64(count)
 			tput = float64(count) / endTime.Sub(startTime).Seconds()
-		}
-
-		totalOrs := 0
-		for i := 0; i < *T; i++ {
-			orInfos[i].Lock()
-			totalOrs += len(orInfos[i].startTimes)
-			orInfos[i].Unlock()
 		}
 
 		// Log summary to lattput file
