@@ -328,7 +328,7 @@ func catchKill(interrupt chan os.Signal) {
 }
 
 func printerMultipeFile(readings chan *response, experimentStart time.Time, rampDown, rampUp, timeout *int) {
-	latFileMAX, err := os.Create("latFile-MAX.txt")
+	latFileMAX, err := os.Create("latFileMAX.txt")
 	if err != nil {
 		log.Println("Error creating lattput file", err)
 		return
