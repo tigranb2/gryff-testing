@@ -52,7 +52,7 @@ var epaxosMode *bool = flag.Bool(
 
 var expLength *int = flag.Int(
   "expLength",
-  30,
+  180,
   "Length of the timed experiment (in seconds).")
 
 var fastPaxos *bool = flag.Bool(
