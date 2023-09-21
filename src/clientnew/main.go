@@ -367,6 +367,8 @@ func printerMultipeFile(readings chan *response, experimentStart time.Time, ramp
 			tput = float64(count) / endTime.Sub(startTime).Seconds()
 		}
 
+		fmt.Println(avg, avgComit, tput)
+
 		// Log summary to lattput file
 		//lattputFile.WriteString(fmt.Sprintf("%d %f %f %d %d %f\n", endTime.UnixNano(), avg, tput, count, totalOrs, avgCommit))
 
