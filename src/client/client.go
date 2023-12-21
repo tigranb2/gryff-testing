@@ -85,6 +85,7 @@ var forceLeader = flag.Int("l", -1, "Force client to talk to a certain replica. 
 var startRange = flag.Int("sr", 0, "Key range start")
 var T = flag.Int("T", 16, "Number of threads (simulated clients).")
 var outstandingReqs = flag.Int64("or", 1, "Number of outstanding requests a thread can have at any given time.")
+var tailAtScale *int = flag.Int("tailAtScale", -1, "Simulate storage request fan-out by performing <tailAtScale> requests and aggregating statistics.") // use clientnew!
 var theta = flag.Float64("theta", 0.99, "Theta zipfian parameter")
 var zKeys = flag.Uint64("z", 1e9, "Number of unique keys in zipfian distribution.")
 var poissonAvg = flag.Int("poisson", -1, "The average number of microseconds between requests. -1 disables Poisson.")
